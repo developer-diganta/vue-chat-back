@@ -70,8 +70,8 @@ app.post("/createroom",async (req,res)=>{
   roomsCollection.push({roomId,passKey});
       await prisma.room.create({
       data: {
-        roomId,
-        passKey,
+        id:roomId,
+        key:passKey,
       },
     });
 

@@ -14,7 +14,7 @@ CREATE TABLE `messages` (
 -- CreateTable
 CREATE TABLE `rooms` (
     `id` INTEGER NOT NULL,
-    `name` VARCHAR(255) NULL,
+    `key` VARCHAR(255) NULL,
     `created_at` TIMESTAMP(0) NULL,
 
     PRIMARY KEY (`id`)
