@@ -61,12 +61,20 @@ app.post("/createroom",async (req,res)=>{
     return;
   }
   const roomId = req.body.roomId;
-  if(roomsCollection.includes(roomId)){
+  const passKey = req.body.passKey;
+  if(roomsCollection.includes({roomId,passKey})){
     res.status(400).send("Room ID already exists")
     return;
   }
 
-  roomsCollection.push(roomId);
+  roomsCollection.push({roomId,passKey});
+      await prisma.room.create({
+      data: {
+        roomId,
+        passKey,
+      },
+    });
+
   res.status(200).send("Room ID registered")
 })
 
