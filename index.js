@@ -7,8 +7,69 @@ const cors = require("cors")
 const app = express();
 app.use(cors())
 app.use(express.json())
+const http = require("http");
+const socketio=require("socket.io");
+const googleTokenVerify = require('./utils/googleTokenValidator')
+const server = http.createServer(app);
+
+const io=socketio(server);
+let roomsCollection=[];
+io.on("connection",socket=>{
+  socket.on("joinRoom",({username,room})=>{
+    console.log(username);
+    const user=userJoin(socket.id,username,room);
+    console.log(user);
+    socket.join(user.room);
+
+    socket.emit("message",formatMessage("Bot","Welcome to chatter"));
+
+    socket.broadcast.to(user.room).emit("message",formatMessage("Bot", `A ${user.username} has joined the chat!`));
+    io.to(user.room).emit("roomUsers",{
+      room:user.room,
+      users: getRoomUsers(user.room)
+    });
+
+  });
+
+  socket.on("chatMessage",(msg)=>{
+    const user=getCurrentUser(socket.id);
+  
+    io.to(user.room).emit("message",formatMessage(user.username,msg));
+  });
+
+  
+  socket.on("disconnect",()=>{
+    const user=userLeave(socket.id);
+    if(user){
+      io.to(user.room).emit('message', formatMessage("Bot", `${user.username} has left the chat`));
+      io.to(user.room).emit("roomUsers",{
+        room:user.room,
+        users: getRoomUsers(user.room)
+      });
+    }
+  });
+
+})
 
 app.use("/",UserRoutes)
-app.listen(3000, () =>
-  console.log('REST API server ready at: http://localhost:3000'),
-)
+
+app.post("/createroom",async (req,res)=>{
+  const idToken = req.body.credential;
+  const email = req.body.email;
+  if(!googleTokenVerify(idToken,email)){
+    res.status(400).send("Authentication Failed")
+    return;
+  }
+  const roomId = req.body.roomId;
+  if(roomsCollection.includes(roomId)){
+    res.status(400).send("Room ID already exists")
+    return;
+  }
+
+  roomsCollection.push(roomId);
+  res.status(200).send("Room ID registered")
+})
+
+server.listen(process.env.PORT || 3000,function(){
+  console.log("Running on 3000")
+});
