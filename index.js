@@ -52,6 +52,21 @@ io.on("connection",socket=>{
 })
 
 app.use("/",UserRoutes)
+function generateRandomString() {
+  const timestamp = new Date().getTime().toString(36); // Convert timestamp to base36 string
+  const randomPart = Math.random().toString(36).substring(2, 8); // Random string part
+
+  const randomString = `${timestamp}${randomPart}`; // Concatenate timestamp and random string
+  return randomString;
+}
+
+function generateRandomInt() {
+  const timestamp = new Date().getTime(); // Get current timestamp
+  const randomPart = Math.floor(Math.random() * 1000000); // Generate random integer
+
+  const randomInt = parseInt(`${timestamp}${randomPart}`); // Concatenate timestamp and random integer
+  return randomInt;
+}
 
 app.post("/createroom",async (req,res)=>{
   const idToken = req.body.credential;
@@ -60,22 +75,27 @@ app.post("/createroom",async (req,res)=>{
     res.status(400).send("Authentication Failed")
     return;
   }
-  const roomId = req.body.roomId;
-  const passKey = req.body.passKey;
+  const roomId = generateRandomString();
+  const passKey = generateRandomString();
+
   if(roomsCollection.includes({roomId,passKey})){
     res.status(400).send("Room ID already exists")
     return;
   }
 
-  roomsCollection.push({roomId,passKey});
-      await prisma.room.create({
+     const resq= await prisma.rooms.create({
       data: {
-        id:roomId,
-        key:passKey,
+        name:roomId,
+        passkey:passKey
       },
     });
+    console.log(resq)
 
-  res.status(200).send("Room ID registered")
+
+  res.status(200).send({
+    roomId,
+    passKey
+  })
 })
 
 server.listen(process.env.PORT || 3000,function(){

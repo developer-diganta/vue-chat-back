@@ -7,43 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model messages {
-  id         Int       @id
-  text       String?   @db.VarChar(255)
-  user_id    Int?
-  room_id    Int?
-  created_at DateTime? @db.Timestamp(0)
-  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "messages_ibfk_1")
-  rooms      rooms?    @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "messages_ibfk_2")
-
-  @@index([room_id], map: "room_id")
-  @@index([user_id], map: "user_id")
-}
-
 model rooms {
-  id         Int         @id
-  name       String?     @db.VarChar(255)
-  created_at DateTime?   @db.Timestamp(0)
-  messages   messages[]
-  user_room  user_room[]
-}
-
-model user_room {
-  user_id Int
-  room_id Int
-  users   users @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_room_ibfk_1")
-  rooms   rooms @relation(fields: [room_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_room_ibfk_2")
-
-  @@id([user_id, room_id])
-  @@index([room_id], map: "room_id")
-}
-
-model users {
-  id          Int         @id
-  google_id   String?     @unique(map: "google_id") @db.VarChar(255)
-  linkedin_id String?     @unique(map: "linkedin_id") @db.VarChar(255)
-  username    String?     @db.VarChar(255)
-  created_at  DateTime?   @db.Timestamp(0)
-  messages    messages[]
-  user_room   user_room[]
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  passkey    String?   @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
 }
