@@ -18,7 +18,7 @@ const auth = async (req,res) => {
       const userId = payload.sub;
       const userEmail = payload.email;
       const userName = payload.name;
-      console.log(payload)
+      // console.log(payload)
       // Here, you can use the user details as needed (e.g., store in database, create a session, etc.)
       
       res.status(200).json({ success: true, user: { userId, userEmail, userName } });

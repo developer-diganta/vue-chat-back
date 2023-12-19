@@ -1,10 +1,10 @@
 const moment=require("moment");
-function formatMessage(username,text){
+function formatMessage(name,msg){
 
   return{
-    username,
-    text,
-    time:moment().format('MMMM Do YYYY,h:mm a')
+    name,
+    msg,
+    timeStamp:moment().format('MMMM Do YYYY,h:mm a')
   }
 }
 

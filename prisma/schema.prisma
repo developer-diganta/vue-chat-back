@@ -12,4 +12,21 @@ model rooms {
   name       String    @db.VarChar(255)
   passkey    String?   @db.VarChar(255)
   created_at DateTime? @default(now()) @db.Timestamp(0)
+  host     String?
+}
+
+model user_room   {
+  user_id  String
+  room_id  String
+
+  @@id([user_id, room_id])
+}
+
+model messages {
+  id        Int      @id @default(autoincrement())
+  message   String
+  user_id   String
+  room_id   String
+  name   String
+  created_at DateTime @default(now())
 }

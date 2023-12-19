@@ -10,43 +10,69 @@ app.use(express.json())
 const http = require("http");
 const socketio=require("socket.io");
 const googleTokenVerify = require('./utils/googleTokenValidator')
+const formatMessage = require('./utils/formatMessage')
+const getRooms = require('./services/getRooms')
+const checkRoom = require('./services/checkRoom')
+const checkNewJoinee = require("./services/checkNewJoinee")
+const addMessage = require('./services/addMessage')
 const server = http.createServer(app);
 
-const io=socketio(server);
+const io = require("socket.io")(server, {
+	cors: {
+		origins: [
+
+			"http://localhost:8080"
+		],
+    credentials: true
+	},
+});
 let roomsCollection=[];
 io.on("connection",socket=>{
-  socket.on("joinRoom",({username,room})=>{
-    console.log(username);
-    const user=userJoin(socket.id,username,room);
-    console.log(user);
-    socket.join(user.room);
+  socket.on("joinRoom",async ({token, email, roomId})=>{
+    //  const rooms = getRooms();
+    console.log(roomId)
+     if(!checkRoom(roomId)){
+      socket.emit("invalidRoom","Invalid Room")
+     }
+    const validateTokenResult = await googleTokenVerify(token,email);
+    if(!validateTokenResult)
+      {
+        socket.emit("expired","Expired Token")
+      }
+    else{
+      socket.emit("message",formatMessage("Bot","HELLO"));
+    }
+    console.log("PPPP")
+    if(!await checkNewJoinee(email,roomId)){
+      socket.emit("falseJoin","User doesnot exist")
+      console.log("HERE")
+      return;
+    }
 
-    socket.emit("message",formatMessage("Bot","Welcome to chatter"));
+    socket.join(roomId);
 
-    socket.broadcast.to(user.room).emit("message",formatMessage("Bot", `A ${user.username} has joined the chat!`));
-    io.to(user.room).emit("roomUsers",{
-      room:user.room,
-      users: getRoomUsers(user.room)
-    });
+    socket.broadcast.to(roomId).emit("message",formatMessage("Bot",`${email} has just joined`))
 
   });
 
-  socket.on("chatMessage",(msg)=>{
-    const user=getCurrentUser(socket.id);
-  
-    io.to(user.room).emit("message",formatMessage(user.username,msg));
+  socket.on("message",async ({name,email,msg, roomId})=>{
+    // const user=getCurrentUser(socket.id);
+    console.log(roomId)
+    await addMessage(email, name,roomId,msg)
+    io.to(roomId).emit("message",formatMessage(name,msg));
+
   });
 
   
   socket.on("disconnect",()=>{
-    const user=userLeave(socket.id);
-    if(user){
-      io.to(user.room).emit('message', formatMessage("Bot", `${user.username} has left the chat`));
-      io.to(user.room).emit("roomUsers",{
-        room:user.room,
-        users: getRoomUsers(user.room)
-      });
-    }
+    // const user=userLeave(socket.id);
+    // if(user){
+    //   io.to(user.room).emit('message', formatMessage("Bot", `${user.username} has left the chat`));
+    //   io.to(user.room).emit("roomUsers",{
+    //     room:user.room,
+    //     users: getRoomUsers(user.room)
+    //   });
+    // }
   });
 
 })
@@ -83,14 +109,13 @@ app.post("/createroom",async (req,res)=>{
     return;
   }
 
-     const resq= await prisma.rooms.create({
+    await prisma.rooms.create({
       data: {
         name:roomId,
-        passkey:passKey
+        passkey:passKey,
+        host: email
       },
     });
-    console.log(resq)
-
 
   res.status(200).send({
     roomId,
@@ -98,6 +123,22 @@ app.post("/createroom",async (req,res)=>{
   })
 })
 
-server.listen(process.env.PORT || 3000,function(){
+
+app.post("/join", async (req,res)=>{
+
+  const email = req.body.email;
+  const roomId = req.body.roomId;
+
+  await prisma.user_room.create({
+    data: {
+      user_id:email,
+      room_id:roomId,
+    },
+  });
+  res.status(200).send("Joined")
+})
+
+server.listen(3000,function(){
   console.log("Running on 3000")
 });
+
