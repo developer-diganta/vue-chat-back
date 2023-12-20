@@ -1,29 +1,27 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
 const checkRoom = async (roomId) => {
-    console.log(roomId)
   try {
     const room = await prisma.rooms.findMany({
-        where: {
-          name: roomId,
-        }
-      });
-      console.log(room)
+      where: {
+        name: roomId,
+      },
+    });
     if (room.length) {
       console.log(`Room with ID ${roomId} exists!`);
       return true;
     } else {
       console.log(`Room with ID ${roomId} does not exist.`);
-      return false; 
+      return false;
     }
   } catch (error) {
-    console.error('Error checking room:', error);
+    console.error("Error checking room:", error);
     return false;
   } finally {
     await prisma.$disconnect();
   }
 };
 
-module.exports = checkRoom
+module.exports = checkRoom;
