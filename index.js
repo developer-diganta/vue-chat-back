@@ -27,8 +27,28 @@ const io = require("socket.io")(server, {
 });
 var roomsCollection=[];
 let currentUsers = new Map();
+let userRooms = new Map();
 io.on("connection", (socket) => {
   socket.on("joinRoom", async ({ token, email, roomId }) => {
+    console.log("PPPPPPP")
+
+    const existingRecord = await prisma.user_room.findMany({
+      where: {
+        user_id:email,
+      },
+    });
+    let existingRooms = [];
+    existingRooms = [];
+    existingRooms = existingRecord.map((x)=>x.room_id)
+    if (userRooms.has(email)) {
+      let rooms = userRooms.get(email);
+      if (!rooms.includes(roomId)) {
+        userRooms.set(email, [...rooms, roomId]);
+      }
+    } else {
+      userRooms.set(email, [...existingRooms]);
+    }
+
     currentUsers.set(socket.id, { email, roomId });
     if (!checkRoom(roomId)) {
       socket.emit("invalidRoom", "Invalid Room");
@@ -44,10 +64,11 @@ io.on("connection", (socket) => {
       return;
     }
 
+  console.log(userRooms)
     socket.join(roomId);
-    socket.broadcast
-      .to(roomId)
-      .emit("message", formatMessage("Bot", `${email} has just joined`));
+    // socket.broadcast
+    //   .to(roomId)
+    //   .emit("message", formatMessage("Bot", `${email} has just joined`));
     const currentList = [];
     currentUsers.forEach((value, key) => {
       if (value.roomId === roomId) {
@@ -59,6 +80,7 @@ io.on("connection", (socket) => {
 
   socket.on("message", async ({ name, email, msg, roomId }) => {
     await addMessage(email, name, roomId, msg);
+    console.log("msg:",msg,"::",roomId)
     io.to(roomId).emit("message", formatMessage(name, msg));
   });
 
@@ -99,6 +121,7 @@ function generateRandomInt() {
 app.post("/createroom", async (req, res) => {
   const idToken = req.body.credential;
   const email = req.body.email;
+
   if (!googleTokenVerify(idToken, email)) {
     res.status(400).send("Authentication Failed");
     return;
@@ -125,6 +148,15 @@ app.post("/createroom", async (req, res) => {
       room_id: roomId,
     },
   });
+
+  if (userRooms.has(email)) {
+    let rooms = userRooms.get(email);
+    if (!rooms.includes(roomId)) {
+      userRooms.set(email, [...rooms, roomId]);
+    }
+  } else {
+    userRooms.set(email, [roomId]);
+  }
 
   res.status(200).send({
     roomId,
@@ -164,6 +196,17 @@ app.post("/join", async (req, res) => {
       room_id: roomId,
     },
   });
+  if (userRooms.has(email)) {
+    let rooms = userRooms.get(email);
+    if (!rooms.includes(roomId)) {
+      userRooms.set(email, [...rooms, roomId]);
+    }
+  } else {
+    userRooms.set(email, [roomId]);
+  }
+
+  console.log(userRooms)
+
   res.status(200).send("Joined");
 });
 
@@ -192,6 +235,26 @@ app.post("/getRooms", async (req,res)=>{
     res.status(200).send(rooms)
   }catch(error){
     res.status(400).send("Some error")
+  }
+})
+
+app.post("/userRooms", async (req,res)=>{
+  try{
+    console.log(userRooms)
+    const userId = req.body.userId;
+    console.log(userRooms.get(userId))
+    const rooms = [];
+    // for (let [key, value] of userRooms) {
+    //   console.log(userId)
+    //   if (value === userId) {
+    //     console.log("here")
+    //     rooms.push(key);
+    //   }
+    // }
+    res.status(200).send(userRooms.get(userId));
+  }catch(error){
+    console.log(error)
+    res.status(400).send("Some Error")
   }
 })
 
