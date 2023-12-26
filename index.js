@@ -16,6 +16,7 @@ const checkRoom = require("./services/checkRoom");
 const checkNewJoinee = require("./services/checkNewJoinee");
 const addMessage = require("./services/addMessage");
 const getRoom = require("./services/getRoom");
+const getRoomByHost = require("./services/getRoomByHost");
 const server = http.createServer(app);
 
 const io = require("socket.io")(server, {
@@ -24,6 +25,7 @@ const io = require("socket.io")(server, {
     credentials: true,
   },
 });
+var roomsCollection=[];
 let currentUsers = new Map();
 io.on("connection", (socket) => {
   socket.on("joinRoom", async ({ token, email, roomId }) => {
@@ -133,14 +135,29 @@ app.post("/createroom", async (req, res) => {
 app.post("/join", async (req, res) => {
   const email = req.body.email;
   const roomId = req.body.roomId;
-  const passkey = req.body.passKey;
+  const passkey = req.body.roomKey;
 
   const room = await getRoom(roomId);
+  if(!room){
+    res.status(400).send("Invalid Values");
+    return;
+  }
   if (room.passkey !== passkey) {
     res.status(400).send("AUTH FAILED");
     return;
-  }
+  } 
 
+
+  const data = await prisma.user_room.findFirst({
+    where:{
+      user_id:email,
+      room_id: roomId
+    }
+  })
+  if(data!=null){
+  res.status(200).send("Joined");
+    return;
+  }
   await prisma.user_room.create({
     data: {
       user_id: email,
@@ -159,6 +176,24 @@ app.post("/getkey", async (req, res) => {
   return;
   res.status(400).send("Invalid");
 });
+
+app.post("/getMessages", async (req,res)=>{
+  const messages = await prisma.messages.findMany({
+    where: {
+      room_id: req.body.roomId,
+    },
+  });
+  res.status(200).send(messages)
+})
+
+app.post("/getRooms", async (req,res)=>{
+  try{
+    const rooms = await getRoomByHost(req.body.email);
+    res.status(200).send(rooms)
+  }catch(error){
+    res.status(400).send("Some error")
+  }
+})
 
 server.listen(3000, function () {
   console.log("Running on 3000");
